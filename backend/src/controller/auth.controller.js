@@ -1,9 +1,9 @@
-import User from "../models/user.model.js";
+import User from "../models/user.models.js";
 import bcrypt from "bcryptjs";
 import {
   generateAccessToken,
   generateRefreshToken,
-} from "../services/token.service.js";
+} from "../service/token.service.js";
 
 // REGISTER
 export const registerUser = async (req, res) => {
