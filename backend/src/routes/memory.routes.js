@@ -3,9 +3,15 @@ import {
   getMemories,
   deleteMemory,
   archiveMemory,
-} from "../controllers/memory.controller.js";
+} from "../controller/memory.controller.js";
+
+import { protect } from "../middleware/auth.middleware.js";
+
+import router from "./auth.route.js";
 
 router.post("/save", protect, saveMemory);
 router.get("/", protect, getMemories);
 router.delete("/:id", protect, deleteMemory);
 router.patch("/:id/archive", protect, archiveMemory);
+
+export default router
