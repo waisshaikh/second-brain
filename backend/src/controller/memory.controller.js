@@ -1,4 +1,5 @@
 import Memory from "../models/memory.model.js";
+import { generateTags } from "../services/ai.service.js";
 
 import {
   detectType,
@@ -14,19 +15,25 @@ export const saveMemory = async (req, res) => {
       return res.status(400).json({ message: "URL is required" });
     }
 
-    //  Detect type automatically
+    // 🔍 Detect type
     const type = detectType(url);
 
     let extractedData = {};
 
-    //  Extract based on type
+    // 🧠 Extract
     if (type === "youtube") {
       extractedData = await extractYouTube(url);
     } else {
       extractedData = await extractArticle(url);
     }
 
-    //  Create memory with fallback support
+    // 💀 AI TAGGING (THIS WAS MISSING)
+    const tags = await generateTags(
+      extractedData.content || extractedData.title   + " " + type
+
+    );
+
+    // 💾 Save
     const memory = await Memory.create({
       user: req.user.id,
       type,
@@ -36,11 +43,13 @@ export const saveMemory = async (req, res) => {
       description: description || "",
       thumbnail: extractedData.thumbnail || "",
       content: extractedData.content || "",
+
+      tags, // 🔥 ADD THIS
     });
 
     res.json(memory);
   } catch (error) {
-    console.error("Save Memory Error:", error);
+    console.error("Save Memory Error:", error.message);
     res.status(500).json({ message: "Something went wrong" });
   }
 };
