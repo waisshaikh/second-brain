@@ -1,5 +1,6 @@
 import Memory from "../models/memory.model.js";
 import { generateTags } from "../services/ai.service.js";
+import { generateEmbedding } from "../services/embedding.service.js";
 
 import {
   detectType,
@@ -15,25 +16,29 @@ export const saveMemory = async (req, res) => {
       return res.status(400).json({ message: "URL is required" });
     }
 
-    // 🔍 Detect type
+    const embedding = await generateEmbedding(
+  extractedData.content || extractedData.title
+);
+
+    // Detect type
     const type = detectType(url);
 
     let extractedData = {};
 
-    // 🧠 Extract
+    //  Extract
     if (type === "youtube") {
       extractedData = await extractYouTube(url);
     } else {
       extractedData = await extractArticle(url);
     }
 
-    // 💀 AI TAGGING (THIS WAS MISSING)
+    //  AI TAGGING (THIS WAS MISSING)
     const tags = await generateTags(
       extractedData.content || extractedData.title   + " " + type
 
     );
 
-    // 💾 Save
+    // Save
     const memory = await Memory.create({
       user: req.user.id,
       type,
@@ -44,7 +49,7 @@ export const saveMemory = async (req, res) => {
       thumbnail: extractedData.thumbnail || "",
       content: extractedData.content || "",
 
-      tags, // 🔥 ADD THIS
+      tags,
     });
 
     res.json(memory);
@@ -53,6 +58,8 @@ export const saveMemory = async (req, res) => {
     res.status(500).json({ message: "Something went wrong" });
   }
 };
+
+
 
 // GET ALL MEMORIES
 export const getMemories = async (req, res) => {
@@ -74,6 +81,8 @@ export const deleteMemory = async (req, res) => {
   res.json({ message: "Deleted successfully" });
 };
 
+
+
 // ARCHIVE MEMORY
 export const archiveMemory = async (req, res) => {
   const { id } = req.params;
@@ -85,4 +94,32 @@ export const archiveMemory = async (req, res) => {
   );
 
   res.json(memory);
+};
+
+
+// sementic Search
+export const searchMemories = async (req, res) => {
+  try {
+    const { query } = req.query;
+
+    if (!query) {
+      return res.status(400).json({ message: "Query required" });
+    }
+
+    const keywords = query.toLowerCase().split(" ");
+
+    const memories = await Memory.find({
+      user: req.user.id,
+      $or: [
+        { title: { $regex: query, $options: "i" } },
+        { content: { $regex: query, $options: "i" } },
+        { tags: { $in: keywords } },
+      ],
+    }).sort({ createdAt: -1 });
+
+    res.json(memories);
+  } catch (error) {
+    console.error("Search Error:", error.message);
+    res.status(500).json({ message: "Search failed" });
+  }
 };

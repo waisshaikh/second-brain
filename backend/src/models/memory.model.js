@@ -24,7 +24,7 @@ const memorySchema = new mongoose.Schema(
     tags: [String],
 
     embedding: {
-      type: [Number], // vector
+      type: [Number], 
       default: [],
     },
 
