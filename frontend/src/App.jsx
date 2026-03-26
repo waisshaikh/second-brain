@@ -1,15 +1,14 @@
-import React from 'react'
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Dashboard from "./pages/Dashboard";
 
-const App = () => {
+function App() {
   return (
-    
-    <div className="h-screen flex items-center justify-center">
-      <h1 className="text-4xl font-bold text-cyan-400">
-        Tailwind v4 Working 
-      </h1>
-    </div>
-  
-  )
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;
