@@ -6,6 +6,8 @@ import {
   detectType,
   extractYouTube,
   extractArticle,
+  extractTweet,
+  extractPDF,
 } from "../services/extract.service.js";
 
 
@@ -25,18 +27,23 @@ export const saveMemory = async (req, res) => {
     let extractedData = {};
 
     // 2. Extract data FIRST
-    if (type === "youtube") {
-      extractedData = await extractYouTube(url);
-    } else {
-      extractedData = await extractArticle(url);
-    }
+  if (type === "youtube") {
+  extractedData = await extractYouTube(url);
+} else if (type === "tweet") {
+  extractedData = await extractTweet(url);
+} else if (type === "pdf") {
+  extractedData = await extractPDF(url);
+} else {
+  extractedData = await extractArticle(url);
+}
 
-    // 3. Prepare content for AI
-    const aiContent =
-      extractedData.content ||
-      extractedData.title ||
-      title ||
-      "";
+// 3. Prepare content for AI
+    const aiContent = `
+${type}
+${extractedData.title || ""}
+${extractedData.content || ""}
+${description || ""}
+`;
 
     // SAFETY: avoid empty AI calls
     const safeContent = aiContent.slice(0, 1000);
@@ -131,20 +138,21 @@ export const searchMemories = async (req, res) => {
     const memories = await Memory.find({ user: req.user.id });
 
     const scored = memories.map((mem) => {
-      let score = 0;
+  // 1 Semantic score (AI)
+  let score = cosineSimilarity(queryEmbedding, mem.embedding || []);
 
-      keywords.forEach((word) => {
-        if (mem.title?.toLowerCase().includes(word)) score += 3;
-        if (mem.content?.toLowerCase().includes(word)) score += 2;
-        if (mem.tags?.includes(word)) score += 5;
-      });
+  // 2. Keyword boost
+  keywords.forEach((word) => {
+    if (mem.title?.toLowerCase().includes(word)) score += 0.3;
+    if (mem.content?.toLowerCase().includes(word)) score += 0.2;
+    if (mem.tags?.includes(word)) score += 0.5;
+  });
 
-      return {
-        ...mem.toObject(),
-        score,
-      };
-    });
-
+  return {
+    ...mem.toObject(),
+    score,
+  };
+});
     const sorted = scored
       .sort((a, b) => b.score - a.score)
       .slice(0, 10);
@@ -161,11 +169,7 @@ export const semanticSearch = async (req, res) => {
   try {
     const { query } = req.query;
 
-    console.log("QUERY:", query); 
-
-    if (!query) {
-      return res.status(400).json({ message: "Query is required" });
-    }
+    console.log("QUERY:", query);
 
     const queryEmbedding = await generateEmbedding(query);
 
@@ -186,20 +190,23 @@ export const semanticSearch = async (req, res) => {
       return { ...mem.toObject(), score };
     });
 
+    // DEBUG
+    console.log(
+      scored.map((m) => ({
+        title: m.title,
+        score: m.score,
+      }))
+    );
+
     scored.sort((a, b) => b.score - a.score);
 
-    console.log("TOP SCORE:", scored[0]?.score); 
+    console.log("TOP SCORE:", scored[0]?.score);
+    const filtered = scored.filter((m) => m.score > 0.45);
 
-    res.json(scored.slice(0, 10));
+    res.json(filtered.slice(0, 10));
+
   } catch (error) {
     console.error("Semantic Search Error:", error);
     res.status(500).json({ message: "Something went wrong" });
   }
-
-  console.log(
-  scored.map((m) => ({
-    title: m.title,
-    score: m.score,
-  }))
-);
 };

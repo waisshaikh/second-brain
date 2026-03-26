@@ -1,17 +1,27 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
+
+
+
 // Detect type
+
 export const detectType = (url) => {
   if (url.includes("youtube.com") || url.includes("youtu.be")) {
     return "youtube";
   }
 
-  if (url.includes("drive.google.com")) {
-    return "file";
+  if (url.includes("twitter.com") || url.includes("x.com")) {
+    return "tweet";
+  }
+
+  if (url.includes(".pdf")) {
+    return "pdf";
   }
 
   return "article";
 };
+
+
 
 // YOUTUBE EXTRACTION
 export const extractYouTube = async (url) => {
@@ -24,11 +34,12 @@ export const extractYouTube = async (url) => {
   }
 
   return {
-    title: "YouTube Video",
-    thumbnail: videoId
-      ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
-      : "",
-  };
+  title: `YouTube Video ${videoId}`,
+  content: `YouTube video with id ${videoId}`,
+  thumbnail: videoId
+    ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+    : "",
+};
 };
 
 // ARTICLE EXTRACTION
@@ -65,6 +76,57 @@ export const extractArticle = async (url) => {
   }
 };
 
+
+// extract Twit
+export const extractTweet = async (url) => {
+  try {
+    return {
+      title: "Tweet",
+      content: `Tweet from ${url}`,
+    };
+  } catch (error) {
+    console.error("Tweet extraction failed:", error.message);
+
+    return {
+      title: "Tweet",
+      content: "",
+    };
+  }
+};
+
+// extract PDF
+
+export const extractPDF = async (url) => {
+  try {
+    let fileUrl = url;
+
+    // 🔥 Convert Google Drive URL to direct download
+    if (url.includes("drive.google.com")) {
+      const fileId = url.split("/d/")[1]?.split("/")[0];
+      fileUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+    }
+
+    const response = await axios.get(fileUrl, {
+      responseType: "arraybuffer",
+    });
+
+    const pdfParse = (await import("pdf-parse")).default;
+
+    const data = await pdfParse(response.data);
+
+    return {
+      title: "PDF Document",
+      content: data.text.slice(0, 3000),
+    };
+  } catch (error) {
+    console.error("PDF extraction failed:", error.message);
+
+    return {
+      title: "PDF Document",
+      content: "",
+    };
+  }
+};
 
 
 
