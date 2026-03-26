@@ -56,7 +56,7 @@ ${description || ""}
       console.error("Embedding failed:", err.message);
     }
 
-    // 5. Generate tags (OPTIONAL - don't break app)
+    // 5. Generate tags
     let tags = [];
     try {
       tags = await generateTags(safeContent + " " + type);
@@ -138,7 +138,7 @@ export const searchMemories = async (req, res) => {
     const memories = await Memory.find({ user: req.user.id });
 
     const scored = memories.map((mem) => {
-  // 1 Semantic score (AI)
+  // 1 Semantic score 
   let score = cosineSimilarity(queryEmbedding, mem.embedding || []);
 
   // 2. Keyword boost

@@ -100,7 +100,7 @@ export const extractPDF = async (url) => {
   try {
     let fileUrl = url;
 
-    // 🔥 Convert Google Drive URL to direct download
+    //  Convert Google Drive URL to direct download
     if (url.includes("drive.google.com")) {
       const fileId = url.split("/d/")[1]?.split("/")[0];
       fileUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
