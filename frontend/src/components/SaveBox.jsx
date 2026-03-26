@@ -25,11 +25,13 @@ export default function SaveBox() {
       />
 
       <button
-        onClick={handleSave}
-        className="px-6 bg-cyan-500 rounded-xl hover:bg-cyan-400 transition"
-      >
-        Save
-      </button>
+  className="px-6 rounded-xl bg-gradient-to-r from-cyan-400 to-purple-500 
+  hover:scale-105 active:scale-95 transition 
+  shadow-lg shadow-cyan-500/30"
+>
+  Save
+</button>
+
     </div>
   );
 }
