@@ -2,13 +2,13 @@ import axios from "axios";
 
 export const generateEmbedding = async (text) => {
   try {
-    const response = await axios.post(
-      "http://localhost:11434/api/embeddings",
-      {
-        model: "llama3",
-        prompt: text.slice(0, 500),
-      }
-    );
+   const response = await axios.post(
+  "http://localhost:11434/api/embeddings",
+  {
+    model: "nomic-embed-text",
+    prompt: text.slice(0, 300),
+  }
+);
 
     return response.data.embedding || [];
   } catch (error) {

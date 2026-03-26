@@ -3,7 +3,8 @@ import {
   getMemories,
   deleteMemory,
   archiveMemory,
-  searchMemories
+  searchMemories,
+  semanticSearch
 } from "../controller/memory.controller.js";
 
 import { protect } from "../middleware/auth.middleware.js";
@@ -16,5 +17,6 @@ router.get("/", protect, getMemories);
 router.delete("/:id", protect, deleteMemory);
 router.patch("/:id/archive", protect, archiveMemory);
 router.get("/search", protect, searchMemories);
+router.get("/semantic", protect, semanticSearch);
 
 export default router

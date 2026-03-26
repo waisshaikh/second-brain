@@ -1,6 +1,7 @@
 import Memory from "../models/memory.model.js";
 import { generateTags } from "../services/ai.service.js";
 import { generateEmbedding } from "../services/embedding.service.js";
+import { cosineSimilarity } from "../utils/similarity.js";
 
 import {
   detectType,
@@ -16,29 +17,32 @@ export const saveMemory = async (req, res) => {
       return res.status(400).json({ message: "URL is required" });
     }
 
-    const embedding = await generateEmbedding(
-  extractedData.content || extractedData.title
-);
-
-    // Detect type
+    // 1. Detect type
     const type = detectType(url);
 
     let extractedData = {};
 
-    //  Extract
+    // 2. Extract data FIRST
     if (type === "youtube") {
       extractedData = await extractYouTube(url);
     } else {
       extractedData = await extractArticle(url);
     }
 
-    //  AI TAGGING (THIS WAS MISSING)
-    const tags = await generateTags(
-      extractedData.content || extractedData.title   + " " + type
+    // 3. Prepare content for AI
+    const aiContent =
+      extractedData.content ||
+      extractedData.title ||
+      title ||
+      "";
 
-    );
+    // 4. Generate embedding
+    const embedding = await generateEmbedding(aiContent);
 
-    // Save
+    // 5. Generate tags
+    const tags = await generateTags(aiContent + " " + type);
+
+    // 6. Save to DB
     const memory = await Memory.create({
       user: req.user.id,
       type,
@@ -50,6 +54,7 @@ export const saveMemory = async (req, res) => {
       content: extractedData.content || "",
 
       tags,
+      embedding, // IMPORTANT (for future AI search)
     });
 
     res.json(memory);
@@ -108,18 +113,58 @@ export const searchMemories = async (req, res) => {
 
     const keywords = query.toLowerCase().split(" ");
 
-    const memories = await Memory.find({
-      user: req.user.id,
-      $or: [
-        { title: { $regex: query, $options: "i" } },
-        { content: { $regex: query, $options: "i" } },
-        { tags: { $in: keywords } },
-      ],
-    }).sort({ createdAt: -1 });
+    const memories = await Memory.find({ user: req.user.id });
 
-    res.json(memories);
+    const scored = memories.map((mem) => {
+      let score = 0;
+
+      keywords.forEach((word) => {
+        if (mem.title?.toLowerCase().includes(word)) score += 3;
+        if (mem.content?.toLowerCase().includes(word)) score += 2;
+        if (mem.tags?.includes(word)) score += 5;
+      });
+
+      return {
+        ...mem.toObject(),
+        score,
+      };
+    });
+
+    const sorted = scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10);
+
+    res.json(sorted);
   } catch (error) {
     console.error("Search Error:", error.message);
     res.status(500).json({ message: "Search failed" });
+  }
+};
+
+export const semanticSearch = async (req, res) => {
+  try {
+    const { query } = req.query;
+
+    if (!query) {
+      return res.status(400).json({ message: "Query required" });
+    }
+
+    const queryEmbedding = await generateEmbedding(query);
+
+    const memories = await Memory.find({ user: req.user.id });
+
+    const scored = memories.map((mem) => ({
+      ...mem.toObject(),
+      score: cosineSimilarity(queryEmbedding, mem.embedding),
+    }));
+
+    const sorted = scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10);
+
+    res.json(sorted);
+  } catch (error) {
+    console.error("Semantic Search Error:", error.message);
+    res.status(500).json({ message: "Failed" });
   }
 };
