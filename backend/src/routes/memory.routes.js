@@ -10,6 +10,7 @@ import {
   semanticSearch,
   getRelatedMemories,
   getClusters,
+  getGraphData,
   getResurfacedMemories,
 } from "../controllers/memory.controller.js";
 
@@ -28,5 +29,7 @@ router.get("/semantic", protect, semanticSearch);
 router.get("/:id/related", protect, getRelatedMemories);
 router.get("/clusters", protect, getClusters);
 router.get("/resurface", protect, getResurfacedMemories);
+
+router.get("/graph", protect, getGraphData);
 
 export default router;
