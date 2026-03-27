@@ -7,16 +7,17 @@ import {
   semanticSearch
 } from "../controller/memory.controller.js";
 
-import { protect } from "../middleware/auth.middleware.js";
 
+// import { protect } from "../middleware/auth.middleware.js";
 
 import router from "./auth.route.js";
 
-router.post("/save", protect, saveMemory);
-router.get("/", protect, getMemories);
-router.delete("/:id", protect, deleteMemory);
-router.patch("/:id/archive", protect, archiveMemory);
-router.get("/search", protect, searchMemories);
-router.get("/semantic", protect, semanticSearch);
+// REMOVE protect from all
+router.post("/save", saveMemory);
+router.get("/", getMemories);
+router.delete("/:id", deleteMemory);
+router.patch("/:id/archive", archiveMemory);
+router.get("/search", searchMemories);
+router.get("/semantic", semanticSearch);
 
-export default router
+export default router;
