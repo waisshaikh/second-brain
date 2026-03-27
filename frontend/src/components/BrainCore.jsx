@@ -1,62 +1,108 @@
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import brain from "../assets/brain.png";
 
 export default function BrainCore() {
-  return (
-    <div className="relative flex items-center justify-center h-[500px]">
+  const [active, setActive] = useState(false);
 
-      {/*CENTER BRAIN */}
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActive(true);
+      setTimeout(() => setActive(false), 4000);
+    }, 6000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="relative flex items-center justify-center h-[420px] overflow-hidden">
+
+      {/* 🌌 DEEP SPACE BACKGROUND */}
+      <div className="absolute inset-0" />
+
+
+      {/* moving gradient */}
+      <motion.div
+        animate={{
+          backgroundPosition: active ? "100% 50%" : "0% 50%",
+        }}
+        transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+        className="absolute inset-0 opacity-40"
+        style={{
+          background:
+          "radial-gradient(circle at center, rgba(34,211,238,0.08), rgba(168,85,247,0.08), transparent 70%)",
+              backgroundSize: "200% 200%",
+          filter: "blur(120px)",
+        }}
+      />
+
+      {/* 🌊 ENERGY WAVES (instead of lines) */}
+      {[...Array(3)].map((_, i) => (
+        <motion.div
+          key={i}
+          animate={{
+            scale: active ? [0.8, 1.6] : 0.8,
+            opacity: active ? [0.2, 0] : 0,
+          }}
+          transition={{
+            duration: 2,
+            delay: i * 0.4,
+            repeat: active ? Infinity : 0,
+          }}
+          className="absolute w-[300px] h-[300px] border border-cyan-400/30 rounded-full"
+        />
+      ))}
+
+      {/* 🧠 BRAIN CORE */}
       <motion.img
         src={brain}
-        alt="brain"
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 1 }}
-        className="w-[300px] relative z-10 drop-shadow-[0_0_40px_rgba(34,211,238,0.6)]"
+        className="w-[260px] relative z-10"
+        animate={{
+          scale: [1, 1.05, 1],
+          filter: active
+            ? "grayscale(0%) brightness(1.5)"
+            : "grayscale(100%) brightness(0.5)",
+        }}
+        transition={{
+          duration: 4,
+          repeat: Infinity,
+        }}
+        style={{
+          filter: active
+            ? "drop-shadow(0 0 80px rgba(0,225,255,1)) drop-shadow(0 0 160px rgba(139,92,246,0.8))"
+            : "grayscale(100%)",
+        }}
       />
 
-      {/* GLOW PULSE */}
-      <div className="absolute w-[350px] h-[350px] rounded-full bg-cyan-500/10 blur-3xl animate-pulse"></div>
-
-      {/* LINES */}
-      {/* TOP */}
+      {/* 💥 CORE ENERGY */}
       <motion.div
-        initial={{ height: 0 }}
-        animate={{ height: 120 }}
-        transition={{ duration: 1 }}
-        className="absolute top-0 w-[2px] bg-gradient-to-b from-cyan-400 to-transparent"
+        animate={{
+          scale: active ? [0.5, 2, 1] : 0,
+          opacity: active ? [0, 1, 0.3] : 0,
+        }}
+        transition={{ duration: 1.5 }}
+        className="absolute w-6 h-6 bg-white rounded-full blur-md"
       />
 
-      {/* BOTTOM */}
-      <motion.div
-        initial={{ height: 0 }}
-        animate={{ height: 120 }}
-        transition={{ duration: 1 }}
-        className="absolute bottom-0 w-[2px] bg-gradient-to-t from-purple-400 to-transparent"
-      />
-
-      {/* LEFT */}
-      <motion.div
-        initial={{ width: 0 }}
-        animate={{ width: 120 }}
-        transition={{ duration: 1 }}
-        className="absolute left-0 h-[2px] bg-gradient-to-r from-cyan-400 to-transparent"
-      />
-
-      {/* RIGHT */}
-      <motion.div
-        initial={{ width: 0 }}
-        animate={{ width: 120 }}
-        transition={{ duration: 1 }}
-        className="absolute right-0 h-[2px] bg-gradient-to-l from-purple-400 to-transparent"
-      />
-
-      {/* DOT ENERGY POINTS */}
-      <div className="absolute top-0 w-3 h-3 bg-cyan-400 rounded-full animate-ping"></div>
-      <div className="absolute bottom-0 w-3 h-3 bg-purple-400 rounded-full animate-ping"></div>
-      <div className="absolute left-0 w-3 h-3 bg-cyan-400 rounded-full animate-ping"></div>
-      <div className="absolute right-0 w-3 h-3 bg-purple-400 rounded-full animate-ping"></div>
-
+      {/* ✨ FLOATING PARTICLES */}
+      {[...Array(10)].map((_, i) => (
+        <motion.div
+          key={i}
+          animate={{
+            y: active ? [-20, -80] : 0,
+            opacity: active ? [0, 1, 0] : 0,
+          }}
+          transition={{
+            duration: 2,
+            delay: i * 0.2,
+          }}
+          className="absolute w-1.5 h-1.5 bg-cyan-300 rounded-full"
+          style={{
+            left: `${30 + i * 4}%`,
+            top: "60%",
+          }}
+        />
+      ))}
     </div>
   );
 }

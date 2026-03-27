@@ -57,38 +57,54 @@ export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // 1. Check user
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
+    // 2. Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
+    // 3. Generate tokens (ONLY minimal payload inside)
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
-    // FIRST cookies
+    // 4. Set cookies (secure for production)
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 15 * 60 * 1000,
+      maxAge: 15 * 60 * 1000, // 15 min
     });
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    //  ONLY ONE RESPONSE
-    return res.json({ user });
+    // 5. Send safe user (NO password)
+    const safeUser = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+    };
+
+    // 6. Response
+    return res.status(200).json({
+      message: "Login successful",
+      user: safeUser,
+    });
 
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
   }
-}; 
+};

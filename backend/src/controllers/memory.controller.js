@@ -210,3 +210,116 @@ export const semanticSearch = async (req, res) => {
     res.status(500).json({ message: "Something went wrong" });
   }
 };
+
+export const getRelatedMemories = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const target = await Memory.findById(id);
+
+    if (!target) {
+      return res.status(404).json({ message: "Memory not found" });
+    }
+
+    const memories = await Memory.find({
+      user: req.user.id,
+      _id: { $ne: id },
+    });
+
+    const scored = memories.map((mem) => ({
+      ...mem.toObject(),
+      score: cosineSimilarity(target.embedding, mem.embedding || []),
+    }));
+
+    const sorted = scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+
+    res.json(sorted);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+export const getClusters = async (req, res) => {
+  try {
+    const memories = await Memory.find({ user: req.user.id });
+
+    const clusters = {};
+
+    memories.forEach((mem) => {
+      const mainTag = mem.tags?.[0] || "general";
+
+      if (!clusters[mainTag]) {
+        clusters[mainTag] = [];
+      }
+
+      clusters[mainTag].push(mem);
+    });
+
+    res.json(clusters);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+export const getResurfacedMemories = async (req, res) => {
+  try {
+    const memories = await Memory.find({ user: req.user.id });
+
+    const now = new Date();
+
+    const resurfaced = memories.filter((mem) => {
+      const diffDays =
+        (now - new Date(mem.createdAt)) / (1000 * 60 * 60 * 24);
+
+      return diffDays > 7; // older than 7 days
+    });
+
+    const random = resurfaced
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 5);
+
+    res.json(random);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+export const getGraphData = async (req, res) => {
+  try {
+    const memories = await Memory.find({ user: req.user.id });
+
+    const nodes = memories.map((mem) => ({
+      id: mem._id,
+      title: mem.title,
+      group: mem.tags?.[0] || "general",
+    }));
+
+    const links = [];
+
+    for (let i = 0; i < memories.length; i++) {
+      for (let j = i + 1; j < memories.length; j++) {
+        const score = cosineSimilarity(
+          memories[i].embedding || [],
+          memories[j].embedding || []
+        );
+
+        if (score > 0.75) {
+          links.push({
+            source: memories[i]._id,
+            target: memories[j]._id,
+            value: score,
+          });
+        }
+      }
+    }
+
+    res.json({ nodes, links });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

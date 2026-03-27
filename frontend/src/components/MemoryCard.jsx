@@ -1,20 +1,39 @@
-import { motion } from "framer-motion";
-
-export default function MemoryCard() {
+export default function MemoryCard({ memory, onDelete }) {
   return (
-    <motion.div
-      whileHover={{ scale: 1.03 }}
-      className="p-5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur hover:border-cyan-400 transition"
-    >
-      <h2 className="font-semibold text-lg">Sample Memory</h2>
-      <p className="text-sm text-gray-400 mt-2">
-        This is a saved article or video preview...
+    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+
+      <h2 className="font-semibold">{memory.title}</h2>
+
+      <p className="text-sm text-gray-400 mt-2 line-clamp-3">
+        {memory.content}
       </p>
 
-      <div className="mt-4 flex gap-2 text-xs">
-        <span className="px-2 py-1 bg-cyan-500/20 rounded">AI</span>
-        <span className="px-2 py-1 bg-purple-500/20 rounded">Tech</span>
+      {/* TAGS */}
+      <div className="flex gap-2 mt-3">
+        {memory.tags?.map((tag, i) => (
+          <span key={i} className="text-xs bg-cyan-500/20 px-2 py-1 rounded">
+            #{tag}
+          </span>
+        ))}
       </div>
-    </motion.div>
+
+      {/* ACTIONS */}
+      <div className="flex justify-between mt-4">
+        <a
+          href={memory.url}
+          target="_blank"
+          className="text-cyan-400 text-sm"
+        >
+          Open
+        </a>
+
+        <button
+          onClick={() => onDelete(memory._id)}
+          className="text-red-400 text-sm"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
   );
 }

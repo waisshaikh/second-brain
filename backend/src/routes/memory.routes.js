@@ -1,23 +1,32 @@
+import express from "express";
+const router = express.Router();
+
 import {
   saveMemory,
   getMemories,
   deleteMemory,
   archiveMemory,
   searchMemories,
-  semanticSearch
-} from "../controller/memory.controller.js";
+  semanticSearch,
+  getRelatedMemories,
+  getClusters,
+  getResurfacedMemories,
+} from "../controllers/memory.controller.js";
 
+import { protect } from "../middleware/auth.middleware.js";
 
-// import { protect } from "../middleware/auth.middleware.js";
+// ALL ROUTES PROTECTED 
+router.post("/save", protect, saveMemory);
+router.get("/", protect, getMemories);
+router.delete("/:id", protect, deleteMemory);
+router.patch("/:id/archive", protect, archiveMemory);
 
-import router from "./auth.route.js";
+router.get("/search", protect, searchMemories);
+router.get("/semantic", protect, semanticSearch);
 
-// REMOVE protect from all
-router.post("/save", saveMemory);
-router.get("/", getMemories);
-router.delete("/:id", deleteMemory);
-router.patch("/:id/archive", archiveMemory);
-router.get("/search", searchMemories);
-router.get("/semantic", semanticSearch);
+// NEW AI ROUTES 
+router.get("/:id/related", protect, getRelatedMemories);
+router.get("/clusters", protect, getClusters);
+router.get("/resurface", protect, getResurfacedMemories);
 
 export default router;
