@@ -7,27 +7,38 @@ export default function GraphView() {
 
   useEffect(() => {
     axios
-      .get("/api/memory/graph", { withCredentials: true })
+      .get("http://localhost:5000/api/memory/graph", { withCredentials: true })
       .then((res) => {
-        const { nodes, links } = res.data;
+        
+        const nodes = res.data.nodes || [];
+        const links = res.data.links || [];
 
-        const width = 900;
-        const height = 600;
+        console.log("NODES:", nodes);
+        console.log("LINKS:", links);
+
+        if (!nodes.length) return;
+
+        const width = window.innerWidth;
+        const height = window.innerHeight;
 
         const svg = d3
           .select(svgRef.current)
           .attr("width", width)
-          .attr("height", height);
+          .attr("height", height)
+          .style("background", "#020617");
 
         svg.selectAll("*").remove();
 
         const simulation = d3
           .forceSimulation(nodes)
-          .force("link", d3.forceLink(links).id((d) => d.id).distance(120))
-          .force("charge", d3.forceManyBody().strength(-200))
+          .force(
+            "link",
+            d3.forceLink(links).id((d) => d.id).distance(120)
+          )
+          .force("charge", d3.forceManyBody().strength(-250))
           .force("center", d3.forceCenter(width / 2, height / 2));
 
-        // LINKS
+        // links
         const link = svg
           .append("g")
           .selectAll("line")
@@ -37,15 +48,17 @@ export default function GraphView() {
           .attr("stroke", "#00FFF7")
           .attr("stroke-opacity", 0.6);
 
-        // NODES
+        //  NODES
         const node = svg
           .append("g")
           .selectAll("circle")
           .data(nodes)
           .enter()
           .append("circle")
-          .attr("r", 8)
+          .attr("r", 12)
           .attr("fill", "#00E19E")
+          .attr("stroke", "#00FFF7")
+          .attr("stroke-width", 1.5)
           .call(
             d3
               .drag()
@@ -54,7 +67,7 @@ export default function GraphView() {
               .on("end", dragended)
           );
 
-        // LABELS
+        //  LABELS
         const label = svg
           .append("g")
           .selectAll("text")
@@ -72,13 +85,9 @@ export default function GraphView() {
             .attr("x2", (d) => d.target.x)
             .attr("y2", (d) => d.target.y);
 
-          node
-            .attr("cx", (d) => d.x)
-            .attr("cy", (d) => d.y);
+          node.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
 
-          label
-            .attr("x", (d) => d.x + 10)
-            .attr("y", (d) => d.y);
+          label.attr("x", (d) => d.x + 10).attr("y", (d) => d.y);
         });
 
         function dragstarted(event, d) {
@@ -97,6 +106,9 @@ export default function GraphView() {
           d.fx = null;
           d.fy = null;
         }
+      })
+      .catch((err) => {
+        console.error("GRAPH ERROR:", err);
       });
   }, []);
 

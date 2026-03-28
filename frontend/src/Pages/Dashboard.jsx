@@ -9,117 +9,122 @@ export default function Dashboard() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // 🔥 GET MEMORIES
   const fetchMemories = async (query = "") => {
     try {
       setLoading(true);
-
       const res = await api.get(
         query ? `/memory/semantic?query=${query}` : "/memory"
       );
-
       setMemories(res.data);
     } catch (err) {
-      console.log("Fetch Error:", err);
+      console.log(err);
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔥 INITIAL LOAD
   useEffect(() => {
     fetchMemories();
   }, []);
 
-  // 🔥 SEARCH (debounce)
   useEffect(() => {
     const delay = setTimeout(() => {
       fetchMemories(search);
     }, 400);
-
     return () => clearTimeout(delay);
   }, [search]);
 
-  // 🔥 SAVE MEMORY
   const handleSave = async () => {
     if (!url) return;
-
-    try {
-      await api.post("/memory/save", { url });
-      setUrl("");
-      fetchMemories(search);
-    } catch (err) {
-      console.log("Save Error:", err);
-    }
+    await api.post("/memory/save", { url });
+    setUrl("");
+    fetchMemories(search);
   };
 
-  // 🔥 DELETE MEMORY
   const handleDelete = async (id) => {
-    try {
-      await api.delete(`/memory/${id}`);
-      fetchMemories(search);
-    } catch (err) {
-      console.log("Delete Error:", err);
-    }
+    await api.delete(`/memory/${id}`);
+    fetchMemories(search);
   };
 
   return (
-    <div className="min-h-screen px-6 py-6">
+    <div className="flex min-h-screen bg-[#020617] text-white overflow-hidden">
 
-      {/* HEADER */}
-      <h1 className="text-2xl font-semibold text-cyan-400">
-        Second Brain
-      </h1>
+      {/* SIDEBAR */}
+      <div className="w-64 p-6 border-r border-white/10 bg-black/40 backdrop-blur-xl">
+        <h1 className="text-xl font-bold text-cyan-400 mb-8">
+          🧠 Second Brain
+        </h1>
 
-      {/* SEARCH */}
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search your brain..."
-        className="w-full mt-6 p-4 rounded-xl bg-white/5 border border-white/10"
-      />
-
-      {/* SAVE */}
-      <div className="flex gap-3 mt-4">
-        <input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="Paste link..."
-          className="flex-1 p-4 rounded-xl bg-white/5 border border-white/10"
-        />
-
-        <button
-          onClick={handleSave}
-          className="px-6 bg-cyan-500 rounded-xl"
-        >
-          Save
-        </button>
+        <div className="space-y-4 text-gray-300">
+          <p className="hover:text-cyan-400 cursor-pointer">📚 Library</p>
+          <p className="hover:text-cyan-400 cursor-pointer">🧠 Graph</p>
+          <p className="hover:text-cyan-400 cursor-pointer">⚡ Recent</p>
+          <p className="hover:text-cyan-400 cursor-pointer">⚙ Settings</p>
+        </div>
       </div>
 
-      {/* LOADING */}
-      {loading && <p className="mt-4 text-gray-400">Loading...</p>}
+      {/* MAIN */}
+      <div className="flex-1 relative p-8">
 
-      
+        {/* 🧠 BACKGROUND BRAIN */}
+        <div className="absolute inset-0 flex justify-center items-center pointer-events-none z-0">
+          <div className="brain-bg">
+            <BrainCore />
+          </div>
+        </div>
 
-      <BrainCore/>
+        {/* CONTENT */}
+        <div className="relative z-10">
 
-      {/* CARDS */}
-      <div className="grid md:grid-cols-3 gap-6 mt-8">
-        {memories.map((mem) => (
-          <MemoryCard
-            key={mem._id}
-            memory={mem}
-            onDelete={handleDelete}
+          {/* SEARCH */}
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search your brain..."
+            className="w-full bg-white/20 backdrop-blur-xl 
+            border border-white/30 rounded-xl px-5 py-3
+            text-black placeholder-gray-600"
           />
-        ))}
-      </div>
 
-      {/* EMPTY STATE */}
-      {!loading && memories.length === 0 && (
-        <p className="mt-6 text-gray-500">
-          No memories yet. Start saving 🚀
-        </p>
-      )}
+          {/* SAVE */}
+          <div className="flex gap-4 mt-4">
+            <input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="Paste link..."
+              className="flex-1 bg-white/20 backdrop-blur-xl 
+              border border-white/30 rounded-xl px-5 py-3
+              text-black placeholder-gray-600"
+            />
+
+            <button
+              onClick={handleSave}
+              className="px-6 rounded-xl bg-cyan-500 hover:bg-cyan-400 
+              text-white shadow-lg"
+            >
+              Save
+            </button>
+          </div>
+
+          {/* GRID */}
+          <div className="grid md:grid-cols-3 gap-6 mt-10">
+            {memories.map((mem) => (
+              <MemoryCard
+                key={mem._id}
+                memory={mem}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+
+          {/* EMPTY */}
+          {!loading && memories.length === 0 && (
+            <p className="text-gray-400 mt-10 text-center">
+              No memories yet
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

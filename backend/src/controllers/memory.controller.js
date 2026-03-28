@@ -294,7 +294,7 @@ export const getGraphData = async (req, res) => {
     const memories = await Memory.find({ user: req.user.id });
 
     const nodes = memories.map((mem) => ({
-      id: mem._id,
+      id: mem._id.toString(),
       title: mem.title,
       group: mem.tags?.[0] || "general",
     }));
@@ -308,18 +308,33 @@ export const getGraphData = async (req, res) => {
           memories[j].embedding || []
         );
 
-        if (score > 0.75) {
+        // ✅ LOWER THRESHOLD
+        if (score > 0.3) {
           links.push({
-            source: memories[i]._id,
-            target: memories[j]._id,
+            source: memories[i]._id.toString(),
+            target: memories[j]._id.toString(),
             value: score,
           });
         }
       }
     }
 
-    res.json({ nodes, links });
+    
+    if (links.length === 0 && memories.length > 1) {
+      links.push({
+        source: memories[0]._id.toString(),
+        target: memories[1]._id.toString(),
+        value: 1,
+      });
+    }
+
+    res.json({
+      nodes,
+      links,
+    });
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
