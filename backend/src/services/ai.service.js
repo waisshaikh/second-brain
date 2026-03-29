@@ -1,42 +1,28 @@
-import axios from "axios";
+import { GoogleGenAI } from "@google/genai";
 
 export const generateTags = async (text) => {
   try {
-    const response = await axios.post(
-      "http://localhost:11434/api/generate",
-      {
-        model: "llama3",
-        prompt: `
-You must return ONLY a list of 5 tags.
+    // ✅ INIT HERE (after env loaded)
+    const ai = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
+    });
 
-Rules:
-- Only comma separated values
-- No sentences
-- No explanations
-- No extra text
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `Return ONLY 5 tags (comma separated):
+${text.slice(0, 500)}`,
+    });
 
-Example:
-react, javascript, frontend, hooks, ui
+    const raw = response.text;
 
-Content:
-${text.slice(0, 500)}
-`,
-        stream: false,
-      }
-    );
-
-    const raw = response.data.response;
-
-    //  Clean tags
-    const tags = raw
-      .replace("\n", "")
+    return raw
+      .replace(/\n/g, "")
       .split(",")
       .map((tag) => tag.trim().toLowerCase())
-      .filter((tag) => tag.length > 0);
+      .filter(Boolean);
 
-    return tags;
   } catch (error) {
-    console.error("Ollama Error:", error.message);
+    console.error("Gemini Error:", error.message);
     return ["general"];
   }
 };

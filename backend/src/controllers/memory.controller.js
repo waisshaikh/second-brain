@@ -12,74 +12,62 @@ import {
 
 
 
-
 export const saveMemory = async (req, res) => {
   try {
-    const { url, title, description } = req.body;
+    const { url, description } = req.body;
 
     if (!url) {
       return res.status(400).json({ message: "URL is required" });
     }
 
-    // 1. Detect type
     const type = detectType(url);
 
     let extractedData = {};
 
-    // 2. Extract data FIRST
-  if (type === "youtube") {
-  extractedData = await extractYouTube(url);
-} else if (type === "tweet") {
-  extractedData = await extractTweet(url);
-} else if (type === "pdf") {
-  extractedData = await extractPDF(url);
-} else {
-  extractedData = await extractArticle(url);
-}
+    // 🔥 DIRECT extraction (no background)
+    if (type === "youtube") {
+      extractedData = await extractYouTube(url);
+    } else if (type === "tweet") {
+      extractedData = await extractTweet(url);
+    } else if (type === "pdf") {
+      extractedData = await extractPDF(url);
+    } else {
+      extractedData = await extractArticle(url);
+    }
 
-// 3. Prepare content for AI
+    // 🔥 AI content
     const aiContent = `
 ${type}
 ${extractedData.title || ""}
-${extractedData.content || ""}
+${extractedData.content || url}
 ${description || ""}
-`;
+    `.slice(0, 1000);
 
-    // SAFETY: avoid empty AI calls
-    const safeContent = aiContent.slice(0, 1000);
+    // 🔥 run AI (FAST with Gemini)
+    const [embedding, tags] = await Promise.all([
+      generateEmbedding(aiContent).catch(() => []),
+      generateTags(aiContent).catch(() => []),
+    ]);
 
-    // 4. Generate embedding (MANDATORY)
-    let embedding = [];
-    try {
-      embedding = await generateEmbedding(safeContent);
-    } catch (err) {
-      console.error("Embedding failed:", err.message);
-    }
-
-    // 5. Generate tags
-    let tags = [];
-    try {
-      tags = await generateTags(safeContent + " " + type);
-    } catch (err) {
-      console.error("Tagging failed:", err.message);
-    }
-
-    // 6. Save to DB
+    // 🔥 SAVE FINAL DATA
     const memory = await Memory.create({
       user: req.user.id,
       type,
       url,
-
-      title: extractedData.title || title || "",
-      description: description || "",
+      title: extractedData.title || "Untitled",
+      description:
+        extractedData.description ||
+        extractedData.title ||
+        "",
       thumbnail: extractedData.thumbnail || "",
       content: extractedData.content || "",
-
       tags,
-      embedding, // CRITICAL FOR SEMANTIC SEARCH
+      embedding,
+      status: "ready",
     });
 
     res.json(memory);
+
   } catch (error) {
     console.error("Save Memory Error:", error);
     res.status(500).json({ message: "Something went wrong" });
@@ -138,21 +126,21 @@ export const searchMemories = async (req, res) => {
     const memories = await Memory.find({ user: req.user.id });
 
     const scored = memories.map((mem) => {
-  // 1 Semantic score 
-  let score = cosineSimilarity(queryEmbedding, mem.embedding || []);
+      // 1 Semantic score 
+      let score = cosineSimilarity(queryEmbedding, mem.embedding || []);
 
-  // 2. Keyword boost
-  keywords.forEach((word) => {
-    if (mem.title?.toLowerCase().includes(word)) score += 0.3;
-    if (mem.content?.toLowerCase().includes(word)) score += 0.2;
-    if (mem.tags?.includes(word)) score += 0.5;
-  });
+      // 2. Keyword boost
+      keywords.forEach((word) => {
+        if (mem.title?.toLowerCase().includes(word)) score += 0.3;
+        if (mem.content?.toLowerCase().includes(word)) score += 0.2;
+        if (mem.tags?.includes(word)) score += 0.5;
+      });
 
-  return {
-    ...mem.toObject(),
-    score,
-  };
-});
+      return {
+        ...mem.toObject(),
+        score,
+      };
+    });
     const sorted = scored
       .sort((a, b) => b.score - a.score)
       .slice(0, 10);
@@ -308,7 +296,7 @@ export const getGraphData = async (req, res) => {
           memories[j].embedding || []
         );
 
-        // ✅ LOWER THRESHOLD
+        // LOWER THRESHOLD
         if (score > 0.3) {
           links.push({
             source: memories[i]._id.toString(),
@@ -319,7 +307,7 @@ export const getGraphData = async (req, res) => {
       }
     }
 
-    
+
     if (links.length === 0 && memories.length > 1) {
       links.push({
         source: memories[0]._id.toString(),

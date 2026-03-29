@@ -213,7 +213,7 @@ export default function GraphView() {
     <AppLayout>
       <div className="relative w-full h-full bg-[#020617] overflow-hidden">
 
-        {/* ❌ NO DATA UI */}
+        {/* NO DATA UI */}
         {!hasData && (
   <div className="absolute inset-0 flex items-center justify-center z-20">
 

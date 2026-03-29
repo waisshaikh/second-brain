@@ -14,6 +14,12 @@ const memorySchema = new mongoose.Schema(
       required: true,
     },
 
+    status: {
+  type: String,
+  enum: ["processing", "ready"],
+  default: "processing",
+},
+
     title: String,
     description: String,
     url: String,
@@ -33,7 +39,9 @@ const memorySchema = new mongoose.Schema(
       default: false,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
+
+ 
 );
 
 export default mongoose.model("Memory", memorySchema);

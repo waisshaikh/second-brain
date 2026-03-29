@@ -12,7 +12,7 @@ export default function AppLayout({ children }) {
           onClick={() => navigate("/")}
           className="text-xl font-bold text-cyan-400 mb-8 cursor-pointer"
         >
-          Second Brain
+          Vartual Brain
         </h1>
 
         <div className="space-y-4 text-gray-300">
