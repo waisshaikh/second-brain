@@ -9,19 +9,26 @@ body {
 }
 
 
-/* Brain as background */
-.brain-bg {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(1.6);
 
-  opacity: 0.6; /* IMPORTANT */
-  filter: blur(6px) drop-shadow(0 0 80px #00FFF7);
+/* FLOATING OVERLAY BRAIN */
+.brain-overlay {
+  /* width: 350px;
+  height: 350px; */
 
-  z-index: 0;
-  pointer-events: none;
+  /* opacity: 0.7; */
+  mix-blend-mode: screen; 
+  
+
+  animation: floatBrain 6s ease-in-out infinite;
 }
+
+/* FLOAT EFFECT */
+@keyframes floatBrain {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-25px); }
+  100% { transform: translateY(0px); }
+}
+
 
 @keyframes floatBrain {
   0% { transform: translateY(0px) scale(1.8); }
@@ -29,3 +36,20 @@ body {
   100% { transform: translateY(0px) scale(1.8); }
 }
 
+
+
+
+
+  .brain-center {
+     width: 260px;
+    /* height: 260px; */
+
+    filter: drop-shadow(0 0 80px #00FFF7);
+    animation: pulse 4s infinite ease-in-out;
+  }
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+} 
