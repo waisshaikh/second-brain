@@ -20,22 +20,41 @@ export const saveMemory = async (req, res) => {
       return res.status(400).json({ message: "URL is required" });
     }
 
-    const type = detectType(url);
+    let type = detectType(url);
 
     let extractedData = {};
 
-    // 🔥 DIRECT extraction (no background)
-    if (type === "youtube") {
-      extractedData = await extractYouTube(url);
-    } else if (type === "tweet") {
-      extractedData = await extractTweet(url);
-    } else if (type === "pdf") {
-      extractedData = await extractPDF(url);
-    } else {
-      extractedData = await extractArticle(url);
+    // EXTRA SAFETY: detect image via headers (not just extension)
+    if (type === "article") {
+      try {
+        const head = await axios.head(url);
+        if (head.headers["content-type"]?.startsWith("image/")) {
+          type = "image";
+        }
+      } catch (e) {
+        // ignore
+      }
     }
 
-    // 🔥 AI content
+    //  DIRECT extraction
+      if (type === "youtube") {
+        extractedData = await extractYouTube(url);
+      } else if (type === "tweet") {
+        extractedData = await extractTweet(url);
+      } else if (type === "pdf") {
+        extractedData = await extractPDF(url);
+      } else if (type === "image") {
+        extractedData = {
+          title: "Image",
+          description: description || "Saved image",
+          content: url,
+          thumbnail: url, 
+        };
+      } else {
+        extractedData = await extractArticle(url);
+      }
+
+    // AI content
     const aiContent = `
 ${type}
 ${extractedData.title || ""}
@@ -43,13 +62,13 @@ ${extractedData.content || url}
 ${description || ""}
     `.slice(0, 1000);
 
-    // 🔥 run AI (FAST with Gemini)
+    //  AI parallel 
     const [embedding, tags] = await Promise.all([
       generateEmbedding(aiContent).catch(() => []),
       generateTags(aiContent).catch(() => []),
     ]);
 
-    // 🔥 SAVE FINAL DATA
+    // SAVE
     const memory = await Memory.create({
       user: req.user.id,
       type,

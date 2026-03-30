@@ -1,15 +1,27 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
 
-// ================== DETECT TYPE ==================
+// == DETECT TYPE 
 export const detectType = (url) => {
-  if (url.includes("youtube.com") || url.includes("youtu.be")) return "youtube";
-  if (url.includes("twitter.com") || url.includes("x.com")) return "tweet";
-  if (url.includes(".pdf")) return "pdf";
+  const lower = url.toLowerCase();
+
+  if (lower.includes("youtube.com") || lower.includes("youtu.be")) return "youtube";
+  if (lower.includes("twitter.com") || lower.includes("x.com")) return "tweet";
+  if (lower.includes(".pdf")) return "pdf";
+
+ 
+  if (
+    lower.match(/\.(jpeg|jpg|png|gif|webp|avif)(\?.*)?$/) ||
+    lower.includes("imagekit.io") ||
+    lower.includes("cloudinary.com")
+  ) {
+    return "image";
+  }
+
   return "article";
 };
 
-// ================== YOUTUBE ==================
+// == YOUTUBE
 const getYouTubeId = (url) => {
   const match = url.match(/(?:youtu\.be\/|v=)([^?&]+)/);
   return match ? match[1] : null;
@@ -22,12 +34,12 @@ export const extractYouTube = async (url) => {
 
     if (!videoId) throw new Error("Invalid YouTube URL");
 
-    // ✅ ALWAYS WORKING THUMBNAIL
+    //  THUMBNAIL
     const thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
     let title = "YouTube Video";
 
-    // Try to get real title
+    //  get real title
     try {
       const res = await axios.get(
         `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
@@ -59,7 +71,7 @@ export const extractYouTube = async (url) => {
   }
 }
 
-// ================== ARTICLE ==================
+// == ARTICLE 
 export const extractArticle = async (url) => {
   try {
     const { data } = await axios.get(url, {
@@ -67,7 +79,7 @@ export const extractArticle = async (url) => {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
       },
-      timeout: 8000, // reduced timeout (faster fail)
+      timeout: 8000, 
     });
 
     const $ = cheerio.load(data);
@@ -113,7 +125,7 @@ export const extractArticle = async (url) => {
 
 
 
-// ================== TWEET ==================
+// == TWEET
 export const extractTweet = async (url) => {
   try {
     const res = await axios.get(
@@ -122,7 +134,7 @@ export const extractTweet = async (url) => {
 
     const html = res.data.html;
 
-    // 🔥 EXTRACT IMAGE FROM HTML
+    //  EXTRACT IMAGE FROM HTML
     const imgMatch = html.match(/src="(https:\/\/pbs.twimg.com[^"]+)"/);
 
     const image = imgMatch ? imgMatch[1] : "";
@@ -144,7 +156,33 @@ export const extractTweet = async (url) => {
   }
 };
 
-// ================== PDF ==================
+
+// image  
+
+export const extractImage = async (url) => {
+  try {
+    return {
+      title: "Image",
+      description: "Saved image",
+      content: url, 
+      thumbnail: url,
+    };
+  } catch (error) {
+    console.error("Image extraction failed:", error.message);
+
+    return {
+      title: "Image",
+      description: "",
+      content: "",
+      thumbnail: "",
+    };
+  }
+};
+
+
+
+
+// ==PDF 
 export const extractPDF = async (url) => {
   try {
     let fileUrl = url;
