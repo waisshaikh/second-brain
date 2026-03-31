@@ -26,10 +26,12 @@ router.get("/search", protect, searchMemories);
 router.get("/semantic", protect, semanticSearch);
 
 // NEW AI ROUTES 
-router.get("/:id/related", protect, getRelatedMemories);
+
 router.get("/clusters", protect, getClusters);
+router.get("/:id/related", protect, getRelatedMemories);
+router.get("/graph", protect, getGraphData);
 router.get("/resurface", protect, getResurfacedMemories);
 
-router.get("/graph", protect, getGraphData);
+
 
 export default router;

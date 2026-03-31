@@ -2,6 +2,7 @@ import Memory from "../models/memory.model.js";
 import { generateTags } from "../services/ai.service.js";
 import { generateEmbedding } from "../services/embedding.service.js";
 import { cosineSimilarity } from "../utils/similarity.js";
+import axios from "axios";
 import {
   detectType,
   extractYouTube,
@@ -24,7 +25,7 @@ export const saveMemory = async (req, res) => {
 
     let extractedData = {};
 
-    // EXTRA SAFETY: detect image via headers (not just extension)
+    
     if (type === "article") {
       try {
         const head = await axios.head(url);
@@ -32,27 +33,27 @@ export const saveMemory = async (req, res) => {
           type = "image";
         }
       } catch (e) {
-        // ignore
+      
       }
     }
 
     //  DIRECT extraction
-      if (type === "youtube") {
-        extractedData = await extractYouTube(url);
-      } else if (type === "tweet") {
-        extractedData = await extractTweet(url);
-      } else if (type === "pdf") {
-        extractedData = await extractPDF(url);
-      } else if (type === "image") {
-        extractedData = {
-          title: "Image",
-          description: description || "Saved image",
-          content: url,
-          thumbnail: url, 
-        };
-      } else {
-        extractedData = await extractArticle(url);
-      }
+    if (type === "youtube") {
+      extractedData = await extractYouTube(url);
+    } else if (type === "tweet") {
+      extractedData = await extractTweet(url);
+    } else if (type === "pdf") {
+      extractedData = await extractPDF(url);
+    } else if (type === "image") {
+      extractedData = {
+        title: "Image",
+        description: description || "Saved image",
+        content: url,
+        thumbnail: url,
+      };
+    } else {
+      extractedData = await extractArticle(url);
+    }
 
     // AI content
     const aiContent = `
@@ -134,7 +135,7 @@ export const archiveMemory = async (req, res) => {
 // sementic Search
 export const searchMemories = async (req, res) => {
   try {
-    const { query } = req.query;
+    const query = req.query.query || req.body.query;
 
     if (!query) {
       return res.status(400).json({ message: "Query required" });
@@ -142,29 +143,52 @@ export const searchMemories = async (req, res) => {
 
     const keywords = query.toLowerCase().split(" ");
 
+    //  generate embedding
+    let queryEmbedding = [];
+    try {
+      queryEmbedding = await generateEmbedding(query);
+    } catch (e) {
+      console.log("Embedding failed, fallback to keyword search");
+    }
+
     const memories = await Memory.find({ user: req.user.id });
 
     const scored = memories.map((mem) => {
-      // 1 Semantic score 
-      let score = cosineSimilarity(queryEmbedding, mem.embedding || []);
+      let score = 0;
 
-      // 2. Keyword boost
+      //  semantic score (MAIN)
+      if (queryEmbedding.length && mem.embedding?.length) {
+        const sim = cosineSimilarity(queryEmbedding, mem.embedding);
+
+        // normalize (-1 → 1) → (0 → 1)
+        score += (sim + 1) / 2;
+      }
+
+      //keyword boost (LOW weight)
       keywords.forEach((word) => {
-        if (mem.title?.toLowerCase().includes(word)) score += 0.3;
-        if (mem.content?.toLowerCase().includes(word)) score += 0.2;
-        if (mem.tags?.includes(word)) score += 0.5;
+        if (mem.title?.toLowerCase().includes(word)) score += 0.15;
+        if (mem.content?.toLowerCase().includes(word)) score += 0.1;
+        if (mem.tags?.includes(word)) score += 0.2;
       });
+
+      //  type boost
+      if (mem.type && query.includes(mem.type)) {
+        score += 0.1;
+      }
 
       return {
         ...mem.toObject(),
         score,
       };
     });
+
     const sorted = scored
+      .filter((m) => m.score > 0.25) //  important filter
       .sort((a, b) => b.score - a.score)
       .slice(0, 10);
 
     res.json(sorted);
+
   } catch (error) {
     console.error("Search Error:", error.message);
     res.status(500).json({ message: "Search failed" });
@@ -174,43 +198,51 @@ export const searchMemories = async (req, res) => {
 
 export const semanticSearch = async (req, res) => {
   try {
-    const { query } = req.query;
+    const query = req.query.query || req.body.query;
+
+    if (!query) {
+      return res.status(400).json({ message: "Query required" });
+    }
 
     console.log("QUERY:", query);
 
-    const queryEmbedding = await generateEmbedding(query);
+    // improved query embedding
+    const queryEmbedding = await generateEmbedding(
+      `Search query: ${query}`
+    );
+
+    if (!queryEmbedding.length) {
+      return res.json([]);
+    }
 
     const memories = await Memory.find({ user: req.user.id });
 
-    const cosineSimilarity = (a, b) => {
-      if (!a.length || !b.length) return 0;
-
-      const dot = a.reduce((sum, val, i) => sum + val * b[i], 0);
-      const magA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
-      const magB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
-
-      return dot / (magA * magB);
-    };
-
     const scored = memories.map((mem) => {
-      const score = cosineSimilarity(queryEmbedding, mem.embedding || []);
+      let score = 0;
+
+      if (mem.embedding?.length) {
+        const sim = cosineSimilarity(queryEmbedding, mem.embedding);
+
+        //  normalized + boosted
+        score += ((sim + 1) / 2) * 2;
+      }
+
+      // slight penalty for mismatch
+      if (!mem.title?.toLowerCase().includes(query.toLowerCase())) {
+        score -= 0.05;
+      }
+
       return { ...mem.toObject(), score };
     });
 
-    // DEBUG
-    console.log(
-      scored.map((m) => ({
-        title: m.title,
-        score: m.score,
-      }))
-    );
+    const sorted = scored
+      .filter((m) => m.score > 0.35) 
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10);
 
-    scored.sort((a, b) => b.score - a.score);
+    console.log("TOP SCORE:", sorted[0]?.score);
 
-    console.log("TOP SCORE:", scored[0]?.score);
-    const filtered = scored.filter((m) => m.score > 0.45);
-
-    res.json(filtered.slice(0, 10));
+    res.json(sorted);
 
   } catch (error) {
     console.error("Semantic Search Error:", error);
@@ -233,17 +265,43 @@ export const getRelatedMemories = async (req, res) => {
       _id: { $ne: id },
     });
 
-    const scored = memories.map((mem) => ({
-      ...mem.toObject(),
-      score: cosineSimilarity(target.embedding, mem.embedding || []),
-    }));
+    const scored = memories.map((mem) => {
+      let score = 0;
+
+      // Semantic similarity
+      if (target.embedding?.length && mem.embedding?.length) {
+        score += cosineSimilarity(target.embedding, mem.embedding);
+      }
+
+      // TAG MATCH BOOST
+      const commonTags = mem.tags?.filter((tag) =>
+        target.tags?.includes(tag)
+      );
+
+      if (commonTags?.length) {
+        score += commonTags.length * 0.5;
+      }
+
+      //\TYPE MATCH BOOST
+      if (mem.type === target.type) {
+        score += 0.2;
+      }
+
+      return {
+        ...mem.toObject(),
+        score,
+      };
+    });
 
     const sorted = scored
+      .filter((m) => m.score > 0.1) 
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
 
     res.json(sorted);
+
   } catch (error) {
+    console.error("Related Error:", error.message);
     res.status(500).json({ message: error.message });
   }
 };

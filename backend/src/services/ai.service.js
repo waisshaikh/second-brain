@@ -1,12 +1,16 @@
 import { GoogleGenAI } from "@google/genai";
 
+
+
 export const generateTags = async (text) => {
   try {
-    // ✅ INIT HERE (after env loaded)
+    //  INIT HERE TO AVOID RE-INIT ON EVERY CALL
     const ai = new GoogleGenAI({
       apiKey: process.env.GEMINI_API_KEY,
     });
 
+    
+    
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Return ONLY 5 tags (comma separated):
