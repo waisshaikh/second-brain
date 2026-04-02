@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
-import axios from "axios";
+import { api } from "../api/index.js";
 import BrainCore from "../components/BrainCore";
 import AppLayout from "../layouts/AppLayout";
   
