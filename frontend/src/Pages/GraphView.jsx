@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState , rect} from "react";
 import * as d3 from "d3";
 import { api } from "../api/index.js";
 import BrainCore from "../components/BrainCore";
 import AppLayout from "../layouts/AppLayout";
-  
+
 
 export default function GraphView() {
   const svgRef = useRef();
@@ -11,7 +11,7 @@ export default function GraphView() {
   const [activeNode, setActiveNode] = useState(null);
 
   useEffect(() => {
-   api.get("/memory/graph")
+    api.get("/memory/graph")
       .then((res) => {
         const nodes = res.data.nodes || [];
 
@@ -23,14 +23,14 @@ export default function GraphView() {
         setHasData(true);
 
         const parent = svgRef.current.parentElement;
-        const width = parent.clientWidth;
-        const height = parent.clientHeight;
+        const width = rect.width;
+        const height = rect.height || 600;
 
         const centerX = width / 2;
         const centerY = height / 2;
 
         const svg = d3
-          .select(svgRef.current) 
+          .select(svgRef.current)
           .attr("width", width)
           .attr("height", height)
           .style("background", "#020617");
@@ -77,7 +77,7 @@ export default function GraphView() {
           .attr("opacity", () => Math.random());
 
         //  ORBIT SYSTEM
-        const radiusStep = 140;
+        const radiusStep = 180;
         const nodesPerRing = 6;
 
         nodes.forEach((node, i) => {
