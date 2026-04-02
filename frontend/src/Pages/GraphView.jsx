@@ -87,7 +87,7 @@ export default function GraphView() {
           node.radius = radiusStep * (ring + 1);
           node.angle = (pos / nodesPerRing) * Math.PI * 2;
 
-          node.speed = 0.0001 + ring * 0.00003; // 🐢 slow
+          node.speed = 0.0001 + ring * 0.00003; 
         });
 
         // ORBIT RINGS
