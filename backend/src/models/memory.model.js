@@ -33,6 +33,12 @@ const memorySchema = new mongoose.Schema(
       type: [Number], 
       default: [],
     },
+    collections: [
+  {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Collection",
+  },
+],
 
     isArchived: {
       type: Boolean,
@@ -40,6 +46,7 @@ const memorySchema = new mongoose.Schema(
     },
   },
   { timestamps: true },
+  
 
  
 );

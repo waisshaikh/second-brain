@@ -3,6 +3,7 @@ import * as d3 from "d3";
 import axios from "axios";
 import BrainCore from "../components/BrainCore";
 import AppLayout from "../layouts/AppLayout";
+import { api } from "../api"; 
 
 export default function GraphView() {
   const svgRef = useRef();
@@ -10,24 +11,18 @@ export default function GraphView() {
   const [activeNode, setActiveNode] = useState(null);
 
   useEffect(() => {
-    axios
-      .get("http://localhost:5000/api/memory/graph", {
-        withCredentials: true,
-      })
+   api.get("/memory/graph")
       .then((res) => {
-
         const nodes = res.data.nodes || [];
 
-        if (nodes.length === 0) {
+        if (!nodes.length) {
           setHasData(false);
           return;
         }
 
         setHasData(true);
-        if (!nodes.length) return;
 
         const parent = svgRef.current.parentElement;
-
         const width = parent.clientWidth;
         const height = parent.clientHeight;
 
@@ -35,51 +30,51 @@ export default function GraphView() {
         const centerY = height / 2;
 
         const svg = d3
-          .select(svgRef.current)
+          .select(svgRef.current) 
           .attr("width", width)
           .attr("height", height)
           .style("background", "#020617");
 
         svg.selectAll("*").remove();
 
-        //  GLOW EFFECT
+        //  DEFINITIONS (GLOW + IMAGE PATTERNS)
         const defs = svg.append("defs");
+
         const filter = defs.append("filter").attr("id", "glow");
-
-        filter
-          .append("feGaussianBlur")
-          .attr("stdDeviation", "3")
-          .attr("result", "coloredBlur");
-
+        filter.append("feGaussianBlur").attr("stdDeviation", "3");
         const feMerge = filter.append("feMerge");
-        feMerge.append("feMergeNode").attr("in", "coloredBlur");
+        feMerge.append("feMergeNode");
         feMerge.append("feMergeNode").attr("in", "SourceGraphic");
 
-        //STAR BACKGROUND
-        const stars = d3.range(120);
+        //  IMAGE PATTERNS (THUMBNAILS)
+        nodes.forEach((d) => {
+          if (d.thumbnail) {
+            const pattern = defs.append("pattern")
+              .attr("id", `img-${d._id}`)
+              .attr("patternUnits", "objectBoundingBox")
+              .attr("width", 1)
+              .attr("height", 1);
 
-        const starGroup = svg.append("g");
+            pattern.append("image")
+              .attr("href", d.thumbnail)
+              .attr("width", 80)
+              .attr("height", 80)
+              .attr("preserveAspectRatio", "xMidYMid slice");
+          }
+        });
 
-        starGroup
+        //  STARS
+        svg
+          .append("g")
           .selectAll("circle")
-          .data(stars)
+          .data(d3.range(120))
           .enter()
           .append("circle")
           .attr("cx", () => Math.random() * width)
           .attr("cy", () => Math.random() * height)
           .attr("r", () => Math.random() * 1.5)
-          .attr("fill", "#ffffff")
-          .attr("opacity", () => Math.random())
-          .each(function repeat() {
-            function twinkle() {
-              d3.select(this)
-                .transition()
-                .duration(2000 + Math.random() * 3000)
-                .attr("opacity", Math.random())
-                .on("end", twinkle);
-            }
-            twinkle.call(this);
-          });
+          .attr("fill", "#fff")
+          .attr("opacity", () => Math.random());
 
         //  ORBIT SYSTEM
         const radiusStep = 140;
@@ -87,16 +82,15 @@ export default function GraphView() {
 
         nodes.forEach((node, i) => {
           const ring = Math.floor(i / nodesPerRing);
-          const positionInRing = i % nodesPerRing;
-
-          const angle = (positionInRing / nodesPerRing) * Math.PI * 2;
+          const pos = i % nodesPerRing;
 
           node.radius = radiusStep * (ring + 1);
-          node.angle = angle;
-          node.speed = 0.0015 + ring * 0.0005;
+          node.angle = (pos / nodesPerRing) * Math.PI * 2;
+
+          node.speed = 0.0001 + ring * 0.00003; // 🐢 slow
         });
 
-        //  ORBIT RINGS
+        // ORBIT RINGS
         const uniqueRadii = [...new Set(nodes.map((n) => n.radius))];
 
         svg
@@ -113,7 +107,7 @@ export default function GraphView() {
           .attr("stroke-opacity", 0.08)
           .attr("stroke-dasharray", "3,6");
 
-        //  LINKS
+        // LINKS
         const link = svg
           .append("g")
           .selectAll("line")
@@ -124,19 +118,18 @@ export default function GraphView() {
           .attr("stroke-opacity", 0.25)
           .attr("filter", "url(#glow)");
 
-        //  NODES
-
-        const node = svg
-          .append("g")
+        //  NODES (PROFILE STYLE)
+        const node = svg.append("g")
           .selectAll("circle")
           .data(nodes)
           .enter()
           .append("circle")
-          .attr("r", 7)
-          .attr("fill", "#00E19E")
+          .attr("r", 12)
+          .attr("fill", (d) =>
+            d.thumbnail ? `url(#img-${d._id})` : "#00E19E"
+          )
           .attr("stroke", "#00FFF7")
-          .attr("stroke-width", 1.5)
-          .attr("filter", "url(#glow)")
+          .attr("stroke-width", 2)
           .style("cursor", "pointer");
 
         //  LABELS
@@ -150,35 +143,42 @@ export default function GraphView() {
           .attr("font-size", 10)
           .attr("fill", "#ffffff");
 
-        // ZOOM
-        const graphGroup = svg.append("g");
-
-        const zoom = d3
-          .zoom()
-          .scaleExtent([0.5, 3])
-          .on("zoom", (event) => {
-            graphGroup.attr("transform", event.transform);
+        //  HOVER
+        node
+          .on("mouseover", function () {
+            d3.select(this)
+              .transition()
+              .duration(200)
+              .attr("r", 18)
+              .attr("stroke", "#ffffff")
+              .attr("stroke-width", 3);
+          })
+          .on("mouseout", function () {
+            d3.select(this)
+              .transition()
+              .duration(200)
+              .attr("r", 12)
+              .attr("stroke", "#00FFF7")
+              .attr("stroke-width", 2);
           });
 
-        svg.call(zoom);
-
-
-        // NODE CLICK → ZOOM
+        //  CLICK
         node.on("click", (event, d) => {
+          event.stopPropagation();
+
           setActiveNode(d);
 
-          const scale = 1.8;
-          const x = centerX - d.x * scale;
-          const y = centerY - d.y * scale;
+          node.attr("opacity", 0.3);
+          link.attr("opacity", 0.1);
 
-          svg.transition().duration(800).call(
-            zoom.transform,
-            d3.zoomIdentity.translate(x, y).scale(scale)
-          );
+          d3.select(event.currentTarget)
+            .attr("opacity", 1)
+            .attr("r", 20)
+            .attr("stroke", "#ffffff")
+            .attr("stroke-width", 3);
         });
 
-        //ANIMATION LOOP
-
+        //  ANIMATION
         function animate() {
           nodes.forEach((d) => {
             d.angle += d.speed;
@@ -203,9 +203,6 @@ export default function GraphView() {
         }
 
         animate();
-      })
-      .catch((err) => {
-        console.error(err);
       });
   }, []);
 
@@ -213,76 +210,74 @@ export default function GraphView() {
     <AppLayout>
       <div className="relative w-full h-full bg-[#020617] overflow-hidden">
 
-        {/* NO DATA UI */}
-        {!hasData && (
-  <div className="absolute inset-0 flex items-center justify-center z-20">
-
-    <div className="text-center max-w-md px-6">
-
-      {/* ICON / VISUAL */}
-      <div className="mb-6 flex justify-center">
-        <div className="w-24 h-24 rounded-full 
-        bg-gradient-to-r from-cyan-500/20 to-purple-500/20 
-        flex items-center justify-center
-        shadow-[0_0_60px_#00FFF7]">
-
-          <span className="text-4xl">🧠</span>
-        </div>
-      </div>
-
-      {/* TITLE */}
-      <h2 className="text-2xl font-semibold text-cyan-400">
-        Your brain is empty
-      </h2>
-
-      {/* SUBTEXT */}
-      <p className="text-gray-400 mt-3 leading-relaxed">
-        Start building your second brain by saving links, ideas, and content.
-        We’ll automatically organize everything for you.
-      </p>
-
-      {/* CTA BUTTON */}
-      <button
-        onClick={() => window.location.href = "/"}
-        className="mt-6 px-6 py-3 rounded-xl 
-        bg-gradient-to-r from-cyan-400 to-purple-500 
-        hover:scale-105 active:scale-95 transition
-        shadow-lg shadow-cyan-500/30"
-      >
-        ➕ Add your first memory
-      </button>
-
-      {/* OPTIONAL SECOND ACTION */}
-      <p className="text-gray-500 text-sm mt-4">
-        or paste a link in dashboard
-      </p>
-
-    </div>
-  </div>
-)}
-
-        {/*  ONLY SHOW GRAPH IF DATA EXISTS */}
+        {/* GRAPH */}
         {hasData && (
           <>
             <svg ref={svgRef} className="absolute inset-0 z-0" />
 
+            {/* CENTER */}
             <div className="absolute inset-0 flex justify-center items-center z-10 pointer-events-none">
-              <div className="brain-center">
+              <div className="relative">
+                <div className="absolute inset-0 blur-3xl bg-cyan-400/20 animate-pulse rounded-full" />
                 <BrainCore />
               </div>
             </div>
           </>
         )}
 
-        {/* PANEL */}
-        {activeNode && hasData && (
-          <div className="absolute right-6 top-1/2 -translate-y-1/2 w-80 ...">
-            {/* same panel */}
-          </div>
-        )}
+        {/*  SIDEBAR */}
+        <div
+          className={`absolute right-0 top-0 h-full w-[360px] 
+  bg-black/90 backdrop-blur-2xl border-l border-white/10 p-6 z-[999]
+  transition-transform duration-500
+  ${activeNode ? "translate-x-0" : "translate-x-full"}`}
+        >
+          {activeNode && (
+            <>
+              {/* HEADER */}
+              <div className="flex justify-between items-start gap-4">
 
+                <h2 className="text-lg text-cyan-400 font-semibold leading-snug pr-6">
+                  {activeNode.title}
+                </h2>
+
+                {/* PROPER CLOSE BUTTON */}
+                <button
+                  onClick={() => setActiveNode(null)}
+                  className="flex-shrink-0 w-9 h-9 rounded-full 
+          bg-white/10 hover:bg-white/20 
+          flex items-center justify-center text-white"
+                >
+                  ✕
+                </button>
+
+              </div>
+
+              {/* THUMBNAIL */}
+              {activeNode.thumbnail && (
+                <img
+                  src={activeNode.thumbnail}
+                  className="w-full h-44 object-cover rounded-xl mt-5"
+                />
+              )}
+
+              {/* DESC */}
+              <p className="text-gray-400 mt-4 text-sm leading-relaxed">
+                {activeNode.description}
+              </p>
+
+              {/* LINK */}
+              <a
+                href={activeNode.url}
+                target="_blank"
+                className="inline-block mt-6 text-cyan-300 hover:text-cyan-200"
+              >
+                Open →
+              </a>
+            </>
+          )}
+        </div>
       </div>
     </AppLayout>
   );
-
 }

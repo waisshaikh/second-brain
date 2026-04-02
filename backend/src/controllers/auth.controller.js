@@ -69,11 +69,11 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // 3. Generate tokens (ONLY minimal payload inside)
+    // 3. Generate tokens
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
-    // 4. Set cookies (secure for production)
+    // 4. Set cookies 
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -88,7 +88,7 @@ export const loginUser = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    // 5. Send safe user (NO password)
+    // 5. Send safe user
     const safeUser = {
       id: user._id,
       name: user.name,
@@ -98,6 +98,7 @@ export const loginUser = async (req, res) => {
     // 6. Response
     return res.status(200).json({
       message: "Login successful",
+      token: accessToken, 
       user: safeUser,
     });
 
