@@ -3,7 +3,7 @@ import * as d3 from "d3";
 import axios from "axios";
 import BrainCore from "../components/BrainCore";
 import AppLayout from "../layouts/AppLayout";
-import { api } from "../api"; 
+  
 
 export default function GraphView() {
   const svgRef = useRef();

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { api } from "../api";
+import { api } from "../api/index.js";
 import MemoryCard from "../components/MemoryCard";
 import BrainCore from "../components/BrainCore";
 import AppLayout from "../layouts/AppLayout";
