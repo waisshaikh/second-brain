@@ -10,33 +10,22 @@ export default function GraphView() {
   const [activeNode, setActiveNode] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      console.log("⛔ Token missing");
-      return;
-    }
-
-    axios
-      .get("https://second-brain-huvx.onrender.com/api/memory/graph", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+    axios.get("https://second-brain-huvx.onrender.com/api/memory/graph", {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    })
       .then((res) => {
-        console.log("🔥 GRAPH RESPONSE:", res.data);
 
-        const nodes =
-          res.data?.nodes ||
-          res.data?.data?.nodes ||
-          [];
+        const nodes = res.data.nodes || [];
 
-        if (!nodes.length) {
+        if (nodes.length === 0) {
           setHasData(false);
           return;
         }
 
         setHasData(true);
+        if (!nodes.length) return;
 
         if (!svgRef.current) return;
 
@@ -45,11 +34,6 @@ export default function GraphView() {
 
         const width = parent.clientWidth;
         const height = parent.clientHeight;
-
-        if (width === 0 || height === 0) {
-          console.log("⛔ Container size not ready");
-          return;
-        }
 
         const centerX = width / 2;
         const centerY = height / 2;
@@ -62,10 +46,7 @@ export default function GraphView() {
 
         svg.selectAll("*").remove();
 
-        // ✅ GROUP (IMPORTANT FIX)
-        const graphGroup = svg.append("g");
-
-        // GLOW
+        //  GLOW EFFECT
         const defs = svg.append("defs");
         const filter = defs.append("filter").attr("id", "glow");
 
@@ -78,21 +59,22 @@ export default function GraphView() {
         feMerge.append("feMergeNode").attr("in", "coloredBlur");
         feMerge.append("feMergeNode").attr("in", "SourceGraphic");
 
-        // STARS
+        //STAR BACKGROUND
         const stars = d3.range(120);
 
-        graphGroup
-          .selectAll("circle.star")
+        const starGroup = svg.append("g");
+
+        starGroup
+          .selectAll("circle")
           .data(stars)
           .enter()
           .append("circle")
-          .attr("class", "star")
           .attr("cx", () => Math.random() * width)
           .attr("cy", () => Math.random() * height)
           .attr("r", () => Math.random() * 1.5)
           .attr("fill", "#ffffff")
           .attr("opacity", () => Math.random())
-          .each(function () {
+          .each(function repeat() {
             function twinkle() {
               d3.select(this)
                 .transition()
@@ -103,7 +85,7 @@ export default function GraphView() {
             twinkle.call(this);
           });
 
-        // ORBIT SYSTEM
+        //  ORBIT SYSTEM
         const radiusStep = 140;
         const nodesPerRing = 6;
 
@@ -118,15 +100,15 @@ export default function GraphView() {
           node.speed = 0.00005 + ring * 0.000015;
         });
 
-        // ORBITS
+        //  ORBIT RINGS
         const uniqueRadii = [...new Set(nodes.map((n) => n.radius))];
 
-        graphGroup
-          .selectAll("circle.orbit")
+        svg
+          .append("g")
+          .selectAll("circle")
           .data(uniqueRadii)
           .enter()
           .append("circle")
-          .attr("class", "orbit")
           .attr("cx", centerX)
           .attr("cy", centerY)
           .attr("r", (d) => d)
@@ -135,8 +117,9 @@ export default function GraphView() {
           .attr("stroke-opacity", 0.08)
           .attr("stroke-dasharray", "3,6");
 
-        // LINKS
-        const link = graphGroup
+        //  LINKS
+        const link = svg
+          .append("g")
           .selectAll("line")
           .data(nodes)
           .enter()
@@ -145,13 +128,14 @@ export default function GraphView() {
           .attr("stroke-opacity", 0.25)
           .attr("filter", "url(#glow)");
 
-        // NODES
-        const node = graphGroup
-          .selectAll("circle.node")
+        //  NODES
+
+        const node = svg
+          .append("g")
+          .selectAll("circle")
           .data(nodes)
           .enter()
           .append("circle")
-          .attr("class", "node")
           .attr("r", 7)
           .attr("fill", "#00E19E")
           .attr("stroke", "#00FFF7")
@@ -159,8 +143,9 @@ export default function GraphView() {
           .attr("filter", "url(#glow)")
           .style("cursor", "pointer");
 
-        // LABELS
-        const label = graphGroup
+        //  LABELS
+        const label = svg
+          .append("g")
           .selectAll("text")
           .data(nodes)
           .enter()
@@ -170,6 +155,8 @@ export default function GraphView() {
           .attr("fill", "#ffffff");
 
         // ZOOM
+        const graphGroup = svg.append("g");
+
         const zoom = d3
           .zoom()
           .scaleExtent([0.5, 3])
@@ -179,18 +166,19 @@ export default function GraphView() {
 
         svg.call(zoom);
 
-        // CLICK FIX
-        node.on("click", function (event, d) {
-          if (!event) return;
 
+        // NODE CLICK → ZOOM
+        node.on("click", (event, d) => {
           event.stopPropagation();
 
           setActiveNode(d);
 
+          // fade others
           node.transition().duration(300).attr("opacity", 0.2);
           link.transition().duration(300).attr("opacity", 0.05);
 
-          d3.select(this)
+          // highlight selected
+          d3.select(event.currentTarget)
             .transition()
             .duration(300)
             .attr("opacity", 1)
@@ -199,23 +187,24 @@ export default function GraphView() {
             .attr("stroke-width", 3);
         });
 
-        svg.on("click", function () {
+        svg.on("click", () => {
           setActiveNode(null);
 
-          node
-            .transition()
-            .duration(300)
+          node.transition().duration(300)
             .attr("opacity", 1)
             .attr("r", 7)
-            .attr("stroke", "#00FFF7");
+            .attr("stroke", "#00FFF7")
+            .attr("stroke-width", 2);
 
           link.transition().duration(300).attr("opacity", 0.25);
         });
 
-        // ANIMATION
+        //ANIMATION LOOP
+
         function animate() {
           nodes.forEach((d) => {
             d.angle += d.speed;
+
             d.x = centerX + Math.cos(d.angle) * d.radius;
             d.y = centerY + Math.sin(d.angle) * d.radius;
           });
@@ -238,7 +227,7 @@ export default function GraphView() {
         animate();
       })
       .catch((err) => {
-        console.error("❌ GRAPH ERROR:", err);
+        console.error(err);
       });
   }, []);
 
@@ -246,22 +235,121 @@ export default function GraphView() {
     <AppLayout>
       <div className="relative w-full h-full bg-[#020617] overflow-hidden">
 
+        {/* NO DATA UI */}
         {!hasData && (
-          <div className="absolute inset-0 flex items-center justify-center z-20 text-white">
-            No Data Found
+          <div className="absolute inset-0 flex items-center justify-center z-20">
+
+            <div className="text-center max-w-md px-6">
+
+              {/* ICON / VISUAL */}
+              <div className="mb-6 flex justify-center">
+                <div className="w-24 h-24 rounded-full 
+        bg-gradient-to-r from-cyan-500/20 to-purple-500/20 
+        flex items-center justify-center
+        shadow-[0_0_60px_#00FFF7]">
+
+                  <span className="text-4xl">🧠</span>
+                </div>
+              </div>
+
+              {/* TITLE */}
+              <h2 className="text-2xl font-semibold text-cyan-400">
+                Your brain is empty
+              </h2>
+
+              {/* SUBTEXT */}
+              <p className="text-gray-400 mt-3 leading-relaxed">
+                Start building your second brain by saving links, ideas, and content.
+                We’ll automatically organize everything for you.
+              </p>
+
+              {/* CTA BUTTON */}
+              <button
+                onClick={() => window.location.href = "/"}
+                className="mt-6 px-6 py-3 rounded-xl 
+        bg-gradient-to-r from-cyan-400 to-purple-500 
+        hover:scale-105 active:scale-95 transition
+        shadow-lg shadow-cyan-500/30"
+              >
+                ➕ Add your first memory
+              </button>
+
+              {/* OPTIONAL SECOND ACTION */}
+              <p className="text-gray-500 text-sm mt-4">
+                or paste a link in dashboard
+              </p>
+
+            </div>
           </div>
         )}
 
+        {/*  ONLY SHOW GRAPH IF DATA EXISTS */}
         {hasData && (
           <>
             <svg ref={svgRef} className="absolute inset-0 z-0" />
 
             <div className="absolute inset-0 flex justify-center items-center z-10 pointer-events-none">
-              <BrainCore />
+              <div className="brain-center">
+                <BrainCore />
+              </div>
             </div>
           </>
         )}
+
+        {/* PANEL */}
+        {activeNode && hasData && (
+          <div
+            className={`absolute right-0 top-0 h-full w-[380px] 
+    bg-gradient-to-b from-black/80 to-black/60 
+    backdrop-blur-3xl border-l border-white/10 
+    p-6 z-[999]
+    shadow-2xl shadow-cyan-500/10
+    transition-all duration-500 ease-out
+    ${activeNode ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"}`}
+          >
+
+            {/* HEADER */}
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-cyan-400">
+                {activeNode.title}
+              </h2>
+
+              <button
+                onClick={() => setActiveNode(null)}
+                className="w-10 h-10 rounded-full 
+        bg-gradient-to-r from-cyan-500/20 to-purple-500/20
+        hover:scale-110 active:scale-95 transition
+        flex items-center justify-center text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* CONTENT */}
+            <p className="text-gray-400 text-sm leading-relaxed">
+              {activeNode.description || "No description available"}
+            </p>
+
+            {/* OPEN LINK BUTTON */}
+            {activeNode.url && (
+              <a
+                href={activeNode.url}
+                target="_blank"
+                className="mt-6 inline-flex items-center gap-2 
+        px-4 py-2 rounded-lg 
+        bg-gradient-to-r from-cyan-400 to-purple-500 
+        text-black font-medium 
+        hover:scale-105 active:scale-95 transition"
+              >
+                🔗 Open Link
+              </a>
+            )}
+
+          </div>
+        )}
+
       </div>
     </AppLayout>
   );
+
 }
