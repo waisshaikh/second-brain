@@ -16,6 +16,7 @@ export default function GraphView() {
       },
     })
       .then((res) => {
+        console.log(" GRAPH RESPONSE:", res.data);
 
         const nodes = res.data.nodes || [];
 
