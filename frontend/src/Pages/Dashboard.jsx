@@ -87,7 +87,7 @@ console.log("ACTIVE:", activeCollection);
 
       setToast({ type: "success", message: "🧠 Memory stored!" });
     } catch (err) {
-      setToast({ type: "error", message: "❌ Failed bro" });
+      setToast({ type: "error", message: "❌ login required" });
     } finally {
       setIsSaving(false);
       setTimeout(() => setToast(null), 2500);
