@@ -119,7 +119,7 @@ export default function GraphView() {
           .attr("stroke-dasharray", "3,6");
 
         //  LINKS
-        const link = svg
+        const link =  graphGroup
           .append("g")
           .selectAll("line")
           .data(nodes)
@@ -145,7 +145,7 @@ export default function GraphView() {
           .style("cursor", "pointer");
 
         //  LABELS
-        const label = svg
+        const label = graphGroup
           .append("g")
           .selectAll("text")
           .data(nodes)
