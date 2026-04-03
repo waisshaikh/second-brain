@@ -27,7 +27,10 @@ export default function GraphView() {
         setHasData(true);
         if (!nodes.length) return;
 
+        if (!svgRef.current) return;
+
         const parent = svgRef.current.parentElement;
+        if (!parent) return;
 
         const width = parent.clientWidth;
         const height = parent.clientHeight;
@@ -185,16 +188,16 @@ export default function GraphView() {
         });
 
         svg.on("click", () => {
-  setActiveNode(null);
+          setActiveNode(null);
 
-  node.transition().duration(300)
-    .attr("opacity", 1)
-    .attr("r",7)
-    .attr("stroke", "#00FFF7")
-    .attr("stroke-width", 2);
+          node.transition().duration(300)
+            .attr("opacity", 1)
+            .attr("r", 7)
+            .attr("stroke", "#00FFF7")
+            .attr("stroke-width", 2);
 
-  link.transition().duration(300).attr("opacity", 0.25);
-});
+          link.transition().duration(300).attr("opacity", 0.25);
+        });
 
         //ANIMATION LOOP
 
@@ -295,55 +298,55 @@ export default function GraphView() {
 
         {/* PANEL */}
         {activeNode && hasData && (
-  <div
-    className={`absolute right-0 top-0 h-full w-[380px] 
+          <div
+            className={`absolute right-0 top-0 h-full w-[380px] 
     bg-gradient-to-b from-black/80 to-black/60 
     backdrop-blur-3xl border-l border-white/10 
     p-6 z-[999]
     shadow-2xl shadow-cyan-500/10
     transition-all duration-500 ease-out
     ${activeNode ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"}`}
-  >
+          >
 
-    {/* HEADER */}
-    <div className="flex justify-between items-center mb-4">
-      <h2 className="text-lg font-semibold text-cyan-400">
-        {activeNode.title}
-      </h2>
+            {/* HEADER */}
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-cyan-400">
+                {activeNode.title}
+              </h2>
 
-      <button
-        onClick={() => setActiveNode(null)}
-        className="w-10 h-10 rounded-full 
+              <button
+                onClick={() => setActiveNode(null)}
+                className="w-10 h-10 rounded-full 
         bg-gradient-to-r from-cyan-500/20 to-purple-500/20
         hover:scale-110 active:scale-95 transition
         flex items-center justify-center text-white"
-      >
-        ✕
-      </button>
-    </div>
+              >
+                ✕
+              </button>
+            </div>
 
-    {/* CONTENT */}
-    <p className="text-gray-400 text-sm leading-relaxed">
-      {activeNode.description || "No description available"}
-    </p>
+            {/* CONTENT */}
+            <p className="text-gray-400 text-sm leading-relaxed">
+              {activeNode.description || "No description available"}
+            </p>
 
-    {/* OPEN LINK BUTTON */}
-    {activeNode.url && (
-      <a
-        href={activeNode.url}
-        target="_blank"
-        className="mt-6 inline-flex items-center gap-2 
+            {/* OPEN LINK BUTTON */}
+            {activeNode.url && (
+              <a
+                href={activeNode.url}
+                target="_blank"
+                className="mt-6 inline-flex items-center gap-2 
         px-4 py-2 rounded-lg 
         bg-gradient-to-r from-cyan-400 to-purple-500 
         text-black font-medium 
         hover:scale-105 active:scale-95 transition"
-      >
-        🔗 Open Link
-      </a>
-    )}
+              >
+                🔗 Open Link
+              </a>
+            )}
 
-  </div>
-)}
+          </div>
+        )}
 
       </div>
     </AppLayout>
