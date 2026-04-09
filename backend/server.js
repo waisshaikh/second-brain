@@ -1,5 +1,4 @@
-import dotenv from "dotenv";
-dotenv.config();
+import "./src/config/env.js";
 
 import express from "express"; 
 import app from "./src/app.js";
@@ -19,6 +18,7 @@ connectDB()
   .catch((err) => {
     console.log("DB ERROR ", err.message);
   });
+  
 
 //  TEST ROUTE
 app.get("/", (req, res) => {

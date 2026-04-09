@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "https://second-brain-huvx.onrender.com/api",
+  baseURL: "https://second-brain-huvx.onrender.com/api"|| 'http://localhost:5000/'
 });
 
 //   check token validty

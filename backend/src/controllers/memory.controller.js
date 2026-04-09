@@ -66,6 +66,7 @@ ${description || ""}
     //  AI parallel 
     const [embedding, tags] = await Promise.all([
       generateEmbedding(aiContent).catch(() => []),
+      console.log("🔥 generateEmbedding CALLED"),
       generateTags(aiContent).catch(() => []),
     ]);
 
@@ -87,6 +88,7 @@ ${description || ""}
     });
 
     res.json(memory);
+    console.log("RESPONSE:", response.data);
 
   } catch (error) {
     console.error("Save Memory Error:", error);
